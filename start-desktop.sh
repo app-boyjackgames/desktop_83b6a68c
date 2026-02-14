@@ -57,15 +57,3 @@ xsetroot -solid "#2c3e50" &
 xterm &
 
 sleep 1
-
-# Устанавливаем websockify, если его нет
-if ! command -v websockify &> /dev/null; then
-    sudo apt install -y websockify
-fi
-
-# ... после запуска Xvnc и fluxbox ...
-
-sleep 1
-
-# Запуск noVNC через websockify
-websockify --web $WEBROOT 5000 localhost:5901
