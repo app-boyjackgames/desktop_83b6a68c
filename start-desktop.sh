@@ -1,59 +1,45 @@
 #!/bin/bash
+# start-desktop.sh
+# Скрипт запуска кастомного рабочего стола "BoyJack OS"
 
-export HOME=/home/runner
-export DISPLAY=:1
-export USER=runner
+# --- 1. Установка Plymouth и необходимых пакетов ---
+echo "Установка Plymouth и темы BoyJack OS..."
+sudo apt update
+sudo apt install -y plymouth plymouth-themes fluxbox xfce4-terminal firefox pcmanfm
 
-NOVNC_DIR=$(dirname $(which novnc))/../share/webapps/novnc
-WEBROOT=/tmp/novnc-web
+# --- 2. Настройка кастомного Boot Splash ---
+echo "Настройка кастомного Boot Screen..."
+sudo plymouth-set-default-theme boyjack --rebuild-initrd
+# Примечание: Файлы темы должны быть в /usr/share/plymouth/themes/boyjack/
 
-mkdir -p $HOME/.vnc
-mkdir -p $HOME/.fluxbox
-mkdir -p $WEBROOT
-
-cp -r $NOVNC_DIR/* $WEBROOT/
-cat > $WEBROOT/index.html << 'INDEXEOF'
-<!DOCTYPE html>
-<html>
-<head>
-<meta http-equiv="refresh" content="0;url=vnc.html?autoconnect=true&resize=scale">
-</head>
-<body>
-<p>Connecting to desktop...</p>
-</body>
-</html>
-INDEXEOF
-
-cat > $HOME/.fluxbox/startup << 'FLUXEOF'
-#!/bin/bash
-xsetroot -solid "#2c3e50" &
-xterm &
+# --- 3. Настройка рабочего стола Fluxbox ---
+echo "Настройка Fluxbox..."
+mkdir -p ~/.fluxbox
+cat > ~/.fluxbox/startup <<'EOF'
+#!/bin/sh
+# Запуск основных приложений на старте Fluxbox
+xfce4-terminal &
+# Запуск панели или системного трея можно добавить здесь
 exec fluxbox
-FLUXEOF
-chmod +x $HOME/.fluxbox/startup
+EOF
 
-cat > $HOME/.fluxbox/menu << 'MENUEOF'
-[begin] (Desktop)
-  [exec] (Terminal) {xterm}
-  [submenu] (System)
-    [restart] (Restart Fluxbox)
-    [exit] (Exit Fluxbox)
-  [end]
+chmod +x ~/.fluxbox/startup
+
+# --- 4. Создание рабочего меню Power в Fluxbox ---
+echo "Создаем меню Power (Shutdown/Restart)..."
+cat > ~/.fluxbox/menu <<'EOF'
+[begin] (Fluxbox)
+    [exec] (Terminal) {xfce4-terminal}
+    [exec] (File Manager) {pcmanfm}
+    [exec] (Firefox) {firefox}
+    [separator]
+    [submenu] (Power)
+        [exec] (Shutdown) {sudo shutdown -h now}
+        [exec] (Restart) {sudo reboot}
+    [end]
 [end]
-MENUEOF
+EOF
 
-rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 2>/dev/null
-
-Xvnc :1 \
-  -localhost 0 \
-  -SecurityTypes None \
-  -geometry 1280x720 \
-  -depth 24 &
-
-sleep 2
-
-fluxbox &
-xsetroot -solid "#2c3e50" &
-xterm &
-
-sleep 1
+# --- 5. Запуск рабочего стола ---
+echo "Запуск рабочего стола BoyJack OS..."
+startx
