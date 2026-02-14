@@ -15,8 +15,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - uses: actions/configure-pages@v5
 
       - name: Setup Web Assets
         run: |
@@ -33,13 +34,11 @@ jobs:
           </head>
           <body>
             <p>Connecting to desktop...</p>
-            <p>Note: This static page requires a running VNC backend.</p>
           </body>
           </html>
           EOF
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
@@ -47,18 +46,10 @@ jobs:
     needs: build
     runs-on: ubuntu-latest
 
-    permissions:
-      pages: write
-      id-token: write
-      contents: read
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
-        with:
-          enablement: true
