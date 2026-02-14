@@ -58,4 +58,14 @@ xterm &
 
 sleep 1
 
-exec novnc --listen 0.0.0.0:5000 --vnc localhost:5901 --web $WEBROOT
+# Устанавливаем websockify, если его нет
+if ! command -v websockify &> /dev/null; then
+    sudo apt install -y websockify
+fi
+
+# ... после запуска Xvnc и fluxbox ...
+
+sleep 1
+
+# Запуск noVNC через websockify
+websockify --web $WEBROOT 5000 localhost:5901
