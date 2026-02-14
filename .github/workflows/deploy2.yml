@@ -1,31 +1,36 @@
-name: Build and Deploy to GitHub Pages
+name: Deploy Desktop Environment
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
 jobs:
-  build:
+  setup-desktop:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/configure-pages@v5
+      - name: Update System
+        run: |
+          sudo apt update
+          sudo apt upgrade -y
 
-      - name: Setup Web Assets
+      - name: Install Desktop Packages
+        run: |
+          # Устанавливаем через интернет
+          sudo apt install -y tigervnc-standalone-server fluxbox xterm novnc python3 openssl xorg xauth x11-xserver-utils firefox
+
+      - name: Install Local Packages via File Manager
+        run: |
+          # Пример установки пакетов из локальных .deb файлов
+          # Сначала копируем их в рабочую директорию (предположим, что они лежат в репозитории в папке files)
+          sudo dpkg -i files/*.deb || sudo apt-get install -f -y
+
+      - name: Copy noVNC Web Assets
         run: |
           mkdir -p dist
-          sudo apt update
-          sudo apt install -y novnc
           cp -r /usr/share/novnc/* dist/
-
           cat > dist/index.html << 'EOF'
           <!DOCTYPE html>
           <html>
@@ -38,18 +43,21 @@ jobs:
           </html>
           EOF
 
+      - name: Start Desktop
+        run: |
+          chmod +x start-desktop.sh
+          ./start-desktop.sh
+
       - uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
   deploy:
-    needs: build
+    needs: setup-desktop
     runs-on: ubuntu-latest
-
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-
     steps:
       - id: deployment
         uses: actions/deploy-pages@v4
