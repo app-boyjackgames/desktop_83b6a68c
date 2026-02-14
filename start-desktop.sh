@@ -1,61 +1,30 @@
 #!/bin/bash
-set -eux
+set -eu
 
-echo "Установка Fluxbox и необходимых пакетов..."
-sudo apt update
-sudo apt install -y fluxbox xfce4-terminal pcmanfm firefox x11-xserver-utils xvfb
+cleanup() {
+    echo "Cleaning up..."
+    kill $(jobs -p) 2>/dev/null || true
+    rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 2>/dev/null || true
+}
+trap cleanup EXIT
 
-echo "Настройка Fluxbox..."
-mkdir -p ~/.fluxbox
+rm -f /tmp/.X1-lock /tmp/.X11-unix/X1 2>/dev/null || true
 
-# startup
-cat > ~/.fluxbox/startup <<'EOF'
-#!/bin/sh
-xfce4-terminal &
-pcmanfm &
-firefox &
-exec fluxbox
-EOF
-chmod +x ~/.fluxbox/startup
+export HOME=/home/runner/workspace
 
-# меню Fluxbox
-cat > ~/.fluxbox/menu <<'EOF'
-[begin] (Fluxbox)
-    [exec] (Terminal) {xfce4-terminal}
-    [exec] (File Manager) {pcmanfm}
-    [exec] (Firefox) {firefox}
-    [separator]
-    [submenu] (Power)
-        [exec] (Shutdown) {systemctl poweroff}
-        [exec] (Restart) {systemctl reboot}
-    [end]
-[end]
-EOF
+mkdir -p "$HOME/.fluxbox"
 
-# fluxbox.cat
-cat > ~/.fluxbox/fluxbox.cat <<'EOF'
-Fluxbox.Title: BoyJack OS v1.0
-Menu.Terminal: Терминал
-Menu.FileManager: Файловый менеджер
-Menu.Firefox: Firefox
-Menu.Power: Питание
-Menu.Shutdown: Выключение
-Menu.Restart: Перезагрузка
-Tip.CloseWindow: Закрыть окно
-Tip.MinimizeWindow: Свернуть окно
-Tip.MaximizeWindow: Развернуть окно
-Tip.RestoreWindow: Восстановить окно
-Tip.MenuRoot: Главное меню
-Tip.MenuWindow: Меню окна
-Tip.MenuWorkspace: Рабочее пространство
-EOF
+export DISPLAY=:1
 
-# --- Запуск Xvfb и Fluxbox ---
-if [ -z "${DISPLAY:-}" ] || ! pgrep Xorg >/dev/null 2>&1; then
-    echo "Запуск виртуального Xvfb..."
-    Xvfb :1 -screen 0 1024x768x16 &
-    export DISPLAY=:1
-fi
+echo "Starting Xvfb..."
+Xvfb :1 -screen 0 1024x768x24 &
+sleep 2
 
-echo "Запуск Fluxbox..."
+echo "Starting Fluxbox..."
 startfluxbox &
+sleep 1
+
+echo "Starting x11vnc on port 5900..."
+x11vnc -display :1 -nopw -listen 0.0.0.0 -rfbport 5900 -forever -shared -noxdamage &
+
+echo "Desktop is running."
